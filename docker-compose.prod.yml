@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+       context: ./services/api
+    command: gunicorn la_api.main:app --bind 0.0.0.0:5000 -w 4 -k uvicorn.workers.UvicornWorker
+    expose:
+      - 5000
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.fastapi.rule=Host(`apiv2.lohanadfw.org`)"
+      - "traefik.http.routers.fastapi.tls=true"
+      - "traefik.http.routers.fastapi.tls.certresolver=letsencrypt"
+  traefik:
+    image: traefik:v2.2
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`dashboard.lohanadfw.org`)"
+      - "traefik.http.routers.dashboard.tls=true"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.middlewares.auth.basicauth.users=testuser:$$apr1$$jIKW.bdS$$eKXe4Lxjgy/rH65wP1iQe1"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "$PWD/services/traefik/traefik.prod.toml:/etc/traefik/traefik.toml"
